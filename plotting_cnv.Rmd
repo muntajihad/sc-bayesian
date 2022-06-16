@@ -1,0 +1,168 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(HMMcopy)
+clotSegments <- function(correctOutput, segmentOutput){
+  if (is.null(segmentOutput$segs)) {
+    warning("Processed segments now found, automatically processing")
+    segmentOutput$segs <- processSegments(segments$segs,
+                                          space(correctOutput)[1:6206], space(correctOutput)[6206], space(correctOutput)[6206],correctOutput$copy)
+  }
+  cop1<-matrix(ncol=3,nrow=6206,data=NA)
+  cop2<- array(1:6206)
+  cop1[,3] <-cop2
+  correctOutput$copy->cop
+  cop->cop1[,1]
+  cop1[1:501,2]<-"1"
+  cop1[501:988,2]<-"2"
+  cop1[989:1386,2]<-"3"
+  cop1[1387:1770,2]<-"4"
+  cop1[1771:2133,2]<-"5"
+  cop1[2134:2477,2]<-"6"
+  cop1[2478:2797,2]<-"7"
+  cop1[2798:3091,2]<-"8"
+  cop1[3092:3375,2]<-"9"
+  cop1[3376:3648,2]<-"10"
+  cop1[3649:3920,2]<-"11"
+  cop1[3921:4189,2]<-"12"
+  cop1[4190:4421,2]<-"13"
+  cop1[4422:4637,2]<-"14"
+  cop1[4638:4844,2]<-"15"
+  cop1[4845:5026,2]<-"16"
+  cop1[5027:5190,2]<-"17"
+  cop1[5191:5348,2]<-"18"
+  cop1[5349:5468,2]<-"19"
+  cop1[5469:5596,2]<-"20"
+  cop1[5597:5694,2]<-"21"
+  cop1[5695:5798,2]<-"22"
+  cop1[5799:6109,2]<-"X"
+  cop1[6111:6206,2]<-"Y"
+  
+  colnames(cop1)<-c("P","CHR","BP")
+  data.frame(cop1)->cop1
+  #as.numeric(cop1[,1])->cop1[,1]
+  as.numeric(cop1[,2])->cop1[,2]
+  as.numeric(cop1[,3])->cop1[,3]
+  
+  #write.table(cop1,paste("/Users/munta/Desktop/CNV","1.sorted.wig","copy.txt",sep=""),quote=F,row.names=F)
+  segs <- segmentOutput$segs
+  #write.table(segs,paste("/Users/munta/Desktop/CNV","1.sorted.wig",".txt",sep=""),quote=F,row.names=F)
+  correctOutput$state <- segmentOutput$state
+  cols <- stateCols()
+  
+  a <- correctOutput
+  b <- subset(segs, chr == chr)
+
+  return(a)
+
+}
+```
+
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+
+setwd("~/mywigs/")
+plotly <- function(myreadfile){
+  raw=wigsToRangedData(readfile = myreadfile,gcfile = "gc.wig",mapfile = "rmap.wig")
+  corrected=correctReadcount(raw)
+  param <- HMMsegment(corrected, getparam = TRUE) 
+  param$mu <- log(c(1, 1.4, 2, 2.7, 3, 4.5) / 2, 2)
+  param$m <- param$mu
+  segmented_copy <- HMMsegment(corrected, param)
+  a <- clotSegments(corrected, segmented_copy)
+  chrOrder<-c(paste("chr",1:22,sep=""),"chrX","chrY")
+  a$order <- factor(a$chr,levels = chrOrder)
+  aorder <- a[order(a$order),]
+  aorder$log <- log(aorder$copy)
+  aorder <- aorder[aorder$log>-3,]
+  ticks2= c(501,988,1386,1770,2133,2477,2797,3091,3375,3648,3920,4189,4421,4637,4844,5026,5190,5348,5468,
+              5596,5694,6109,6111,6206)
+  clrs <- c("1"="#74C476","2"="#238B45","3"="#00008B","4"="#A50F15","5"="#DE2D26","6"="#FB6A4A")
+  p <- ggplot(aorder,aes(x=1:nrow(aorder),y=log,
+                    col=as.factor(as.character(state))))+
+    geom_point()+
+    #scale_color_brewer(palette = "Set1")+
+    scale_color_manual(values = clrs)+
+    #scale_color_manual(values=c("#F8766D","#00BA42","#00BC59","#00A5FF", "#56B4E9","#56B4E9"))
+    theme(legend.position = "none",
+             axis.title.x = element_blank(),axis.title.y = element_blank(),
+             axis.text.x = element_blank(), axis.ticks.x = element_blank())
+  #geom_vline(xintercept = 2000,linetype="dotted")
+  return(p)
+}
+#scale_color_brewer(palette="Spectral")
+
+```
+
+
+```{r}
+raw=wigsToRangedData(readfile = "mywigs/cell_01.wig",gcfile ="mywigs/gc.wig","mywigs/rmap.wig")
+corrected=correctReadcount(raw)
+param <- HMMsegment(corrected, getparam = TRUE) 
+param$mu <- log(c(1, 1.4, 2, 2.7, 3, 4.5) / 2, 2)
+param$m <- param$mu
+segmented_copy <- HMMsegment(corrected, param)
+a <- clotSegments(corrected,segmented_copy)
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+setwd("~/mywigs/")
+lines <- c(279,426,547,631,788,974,1204,1356,1491,1587,1733,1853,1930,2008,2108,2127,2213,2308,2384,2442,2486,2507,2538)
+plotly("cell_01.wig")+geom_vline(xintercept = lines)
+```
+
+
+
+```{r plotly function, message=FALSE, warning=FALSE, include=FALSE}
+setwd("~/mywigs")
+for (i in 1:9) {
+  x <- paste("cell_0",i,".wig",sep = "")
+  a <- plotly(x)
+  assign(paste("cell_",i,sep = ""),a)
+}
+
+
+for (i in 10:25) {
+  x <- paste("n_cell_",i,".wig",sep = "")
+  a <- plotly(x)
+  assign(paste("cell_",i,sep = ""),a)
+}
+```
+
+```{r}
+library(ggstance)
+library(cowplot)
+library(ggtree)
+
+set1 <- list(cell_1,cell_2,cell_3,cell_4,cell_5)
+set2 <- list(cell_6,cell_7,cell_8,cell_9,cell_10)
+set3 <- list(cell_11,cell_12,cell_13,cell_14,cell_15)
+set4 <- list(cell_16,cell_17,cell_18,cell_19,cell_20)
+set5 <- list(cell_21,cell_22,cell_23,cell_24,cell_25)
+
+group1 <- plot_grid(plotlist=set1, ncol=1, align='v')
+group2 <- plot_grid(plotlist=set2, ncol=1, align='v')
+group3 <- plot_grid(plotlist=set3, ncol=1, align='v')
+group4 <- plot_grid(plotlist=set4, ncol=1, align='v')
+group5 <- plot_grid(plotlist=set5, ncol=1, align='v')
+
+
+all <- plot_grid(plotlist=list(group1,group2,group3,group4), ncol=1, align='v')
+```
+
+
+
+
+
+
+
+
+
+
+
